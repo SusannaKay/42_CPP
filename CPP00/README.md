@@ -1,6 +1,8 @@
-# CPP00
+# CPP00 - Stream, string e prime classi
 
-# Cose nuove:
+La logica è la stessa di C, cambia il modo di organizzarla.
+
+Cose nuove:
 
 - `std::cout` / `std::cin`
 - `std::string`
@@ -96,8 +98,9 @@ str.length();
 str.substr(0, 9);
 ```
 
-`length()` mi dà la lunghezza. Ed è già "disponibile" quando creo l'oggetto "string"
-`substr(0, 9)` prende una parte della stringa da indice 0 a 9.
+`length()` mi dà la lunghezza. Ed è già "disponibile" quando creo l'oggetto "string".
+
+`substr(0, 9)` prende 9 caratteri a partire dall'indice 0, cioè dall'indice 0 all'8.
 Nel phonebook l'ho usato per accorciare i campi troppo lunghi:
 
 ```cpp
@@ -337,6 +340,8 @@ Senza `Contact::`, sarebbe una funzione normale globale, non un metodo della cla
 
 ## Include guard ( come in C )
 
+Evitano che lo stesso header venga incluso due volte nello stesso file.
+
 
 ```cpp
 #ifndef CONTACT_HPP
@@ -415,11 +420,9 @@ PhoneBook();
 
 # Ex00 - Megaphone
 
-## Scopo
+## Obiettivo
 
 Scrivere un programma che prende gli argomenti da terminale e li stampa tutti in maiuscolo, usando un approccio C++ invece delle funzioni stile C.
-
-Prendere gli argomenti da linea di comando e stamparli in maiuscolo.
 
 Se non ci sono argomenti:
 
@@ -465,11 +468,11 @@ Non aggiunge spazi tra gli argomenti.
 
 # Ex01 - My Awesome PhoneBook
 
-## Scopo
+## Obiettivo
 
 Creare una rubrica anni '80 con due classi, `PhoneBook` e `Contact`, capace di salvare massimo 8 contatti, cercarli e mostrarli in tabella.
 
-Rubrica interattiva.
+È una rubrica interattiva, niente allocazione dinamica: il subject la vieta.
 
 Comandi:
 
@@ -519,11 +522,11 @@ if (std::cin.eof())
 ```
 
 EOF = fine input. Può succedere con `Ctrl+D`.
-Senza questo controllo il programma rimane in uno stato indefinito se l'input finisce.
+Senza questo controllo `getline` continua a fallire e il loop gira all'infinito.
 
 ---
 
-# Classe Contact
+## Classe Contact
 
 Dati:
 
@@ -537,7 +540,7 @@ std::string secret;
 
 Sono `private`, quindi fuori dalla classe non li posso toccare direttamente.
 
-## Setter
+### Setter
 
 Setter = metodo che modifica un campo.
 
@@ -562,7 +565,7 @@ Quindi sto dicendo:
 sul contatto in posizione index, imposta firstName con str
 ```
 
-## Getter
+### Getter
 
 Getter = metodo che legge un campo.
 
@@ -585,9 +588,9 @@ Getter e setter sono pubblici, per questo posso usarli sui dati privati.
 
 ---
 
-# Classe PhoneBook
+## Classe PhoneBook
 
-## Cosa contiene
+### Cosa contiene
 
 In `PhoneBook.hpp`:
 
@@ -605,7 +608,7 @@ int count;
 
 Quindi quando creo `PhoneBook`, creo anche 8 oggetti `Contact` dentro di lui.
 
-## Index e count
+### Index e count
 
 `index` indica dove scrivere il prossimo contatto.
 
@@ -641,7 +644,7 @@ count = 8
 
 Perché il nono sovrascrive il primo ( da subject superati gli 8 contatti, quelli successivi devono sovrascrivere i primi ).
 
-## Rubrica circolare
+### Rubrica circolare
 
 Nel codice:
 
@@ -661,7 +664,7 @@ Quindi:
 
 ---
 
-# ADD
+## ADD
 
 `ADD` chiama:
 
@@ -685,7 +688,7 @@ Flag:
 1 -> campo numerico
 ```
 
-## is_valid
+### is_valid
 
 ```cpp
 static bool is_valid(const std::string& s, int digits_flag)
@@ -711,7 +714,7 @@ isdigit(static_cast<unsigned char>(s[i]))
 
 Nota sul cast a `unsigned char`: con `isdigit`/`isspace` evita problemi con char negativi.
 
-## ask_field
+### ask_field
 
 ```cpp
 while (true)
@@ -735,7 +738,7 @@ if (str == "EOF")
 
 ---
 
-# SEARCH
+## SEARCH
 
 `SEARCH` chiama:
 
@@ -751,7 +754,7 @@ Passaggi:
 4. valida input
 5. stampa contatto completo
 
-## Tabella
+### Tabella
 
 Header:
 
@@ -767,7 +770,7 @@ Campi richiesti dalla tabella:
 index | first name | last name | nickname
 ```
 
-## trimContact
+### trimContact
 
 Se il campo è più lungo di 10, va tagliato a 9 + punto.
 
@@ -786,7 +789,7 @@ Esempio:
 SuperLongName -> SuperLong.
 ```
 
-## Scelta indice
+### Scelta indice
 
 Input:
 
@@ -814,7 +817,7 @@ Senza `clear`, gli input successivi continuerebbero a fallire.
 
 Senza `ignore`, la roba sbagliata resterebbe nel buffer.
 
-## Indice utente vs indice array
+### Indice utente vs indice array
 
 La tabella mostra da 1 a 8:
 
@@ -830,7 +833,7 @@ Quindi:
 displayContact(index - 1);
 ```
 
-## displayContact
+### displayContact
 
 Stampa tutti i campi del contatto:
 
@@ -843,3 +846,53 @@ contacts[index].getDarkestSecret()
 ```
 
 Anche `PhoneBook`, pur avendo l'array di `Contact`, non accede ai campi privati direttamente. Usa i getter.
+
+## Error handling ex01
+
+Casi da gestire:
+
+- comando sconosciuto: viene ignorato e si richiede
+- campo vuoto o fatto solo di spazi: si richiede
+- numero di telefono con caratteri non numerici: si richiede
+- `SEARCH` con rubrica vuota
+- indice non numerico, tipo `abc`
+- indice fuori range, tipo `0` o `9`
+- EOF (`Ctrl+D`) sia nel menu sia a metà di un `ADD`
+
+---
+
+# Checklist finale modulo
+
+## Concetti da sapere spiegare
+
+- differenza tra `std::cout` / `std::cin` e `printf` / `scanf`
+- differenza tra `std::cin >>` e `std::getline`
+- perché serve `std::cin.ignore` dopo `std::cin >>`
+- cosa fanno `std::cin.clear()` e `std::cin.eof()`
+- cos'è una classe e cos'è un oggetto
+- `private` vs `public`
+- cos'è l'incapsulamento e a cosa servono getter e setter
+- cosa vuol dire `Contact::` davanti a una funzione
+- quando vengono chiamati costruttore e distruttore
+- perché la rubrica è "circolare"
+
+## Errori tipici da evitare
+
+- usare `std::cin >>` per campi che possono contenere spazi
+- mischiare `>>` e `getline` senza svuotare il buffer
+- non gestire EOF: con `Ctrl+D` il programma va in loop
+- non resettare lo stato di `std::cin` dopo un input sbagliato
+- tagliare i campi a 10 caratteri invece che a 9 + `.`
+- confondere indice mostrato all'utente (1-8) e indice dell'array (0-7)
+- usare `new` nella rubrica: il subject vuole un array statico
+
+## Mini riassunto mentale
+
+```text
+ex00 -> argv + std::string + toupper
+stesso programma del C, ma con gli strumenti del C++
+
+ex01 -> PhoneBook contiene 8 Contact
+Contact = dati privati + getter/setter
+PhoneBook = array circolare + ADD / SEARCH / EXIT
+```
