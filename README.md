@@ -1,4 +1,4 @@
-# 42-CPP
+# 42_CPP
 
 I moduli C++ del cursus di 42, da CPP00 a CPP09, con i miei appunti di studio.
 
