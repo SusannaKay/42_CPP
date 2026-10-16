@@ -8,20 +8,18 @@
 #include <vector>
 #include <exception>
 #include <algorithm>
-#include <time.h>
+#include <ctime>
 
 class PmergeMe{
 
     private:
 
-    int _left;
-    std::vector<std::pair <int, int> > _vect;
-    std::deque<std::pair <int, int> > _deq;
+    std::vector<int> _input;
 
     public:
 
     PmergeMe();
-    PmergeMe(std::vector<int> input);
+    PmergeMe(const std::vector<int> &input);
     PmergeMe(const PmergeMe &other);
     ~PmergeMe();
     PmergeMe &operator=(const PmergeMe &other);
@@ -30,21 +28,17 @@ class PmergeMe{
     std::vector<int> processVector();
     std::deque<int> processDeque();
 
-    void mainDeque(std::deque<int> &mainchain, std::deque<int> &pending);
-    void mainVector(std::vector<int> &mainchain, std::vector<int> &pending);
-
-
     class InvalidInput : public std::exception {
         virtual const char *what() const throw();
     };
 };
 
 template <typename T>
-void printCont(const T &pairs)
+void printCont(const T &cont)
 {
-    for (size_t i = 0; i < pairs.size(); i++)
+    for (size_t i = 0; i < cont.size(); i++)
     {
-        std::cout << pairs[i] << " ";
+        std::cout << cont[i] << " ";
     }
     std::cout << std::endl;
 }

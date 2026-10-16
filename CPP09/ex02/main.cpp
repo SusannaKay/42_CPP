@@ -1,10 +1,24 @@
 #include "PmergeMe.hpp"
 #include <cstdlib>
 #include <limits.h>
+#include <cctype>
 
 static bool isInvalid(long num)
 {
     return (num < 0 || num > INT_MAX);
+}
+
+// strtol accetta anche "", " 42" e "+42": li scarto prima
+static bool isNumber(const char *str)
+{
+    if (!str[0])
+        return false;
+    for (size_t i = 0; str[i]; i++)
+    {
+        if (!isdigit(static_cast<unsigned char>(str[i])))
+            return false;
+    }
+    return true;
 }
 
 int main(int argc, char **argv)
@@ -21,6 +35,8 @@ int main(int argc, char **argv)
     {
         try
         {
+            if (!isNumber(argv[i]))
+                throw PmergeMe::InvalidInput();
             char *end;
             long num = std::strtol(argv[i], &end, 10);
             if (isInvalid(num) || *end != '\0')
