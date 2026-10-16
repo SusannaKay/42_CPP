@@ -1,36 +1,40 @@
-# CPP04 - Polimorfismo, classi astratte, deep copy
+# CPP04 - Polimorfismo, classi astratte e deep copy
 
-Modulo sul polimorfismo vero.
-Non basta ereditare: conta cosa succede quando uso un puntatore alla classe base.
+In CPP03 abbiamo visto l'ereditarietà. Qui si va un passo oltre: cosa succede quando uso un puntatore alla classe base per un oggetto derivato.
 
 ```cpp
 const Animal* animal = new Dog();
 animal->makeSound();
 ```
 
-Scopo:
-- se `makeSound()` è `virtual`, viene chiamato il metodo di `Dog`
-- se non è `virtual`, viene chiamato quello di `Animal`
-- tipo del puntatore != tipo reale dell'oggetto
+Abbaia o fa un verso generico?
+
+Dipende da una parola sola: `virtual`.
+
+Cose nuove:
+
+- polimorfismo
+- funzioni virtuali
+- distruttore virtuale
+- deep copy vs shallow copy
+- classi astratte e funzioni virtuali pure
 
 ---
 
-# Concetti chiave
+# Polimorfismo
 
-## Polimorfismo
+## Tipo statico e tipo dinamico
 
-Stessa chiamata, comportamento diverso in base all'oggetto reale.
-
-```text
+```cpp
 Animal* a = new Cat();
-a->makeSound();
 ```
 
-Nota:
-- tipo statico: `Animal*`
-- tipo dinamico: `Cat`
-- con metodo virtuale: `Cat::makeSound()`
-- senza virtual: `Animal::makeSound()`
+Qui ci sono due tipi:
+
+- tipo statico: `Animal*`, cioè quello che vede il compilatore
+- tipo dinamico: `Cat`, cioè l'oggetto che c'è davvero in memoria
+
+Polimorfismo = stessa chiamata, comportamento diverso in base al tipo dinamico.
 
 ## virtual
 
@@ -40,10 +44,20 @@ In `Animal`:
 virtual void makeSound() const;
 ```
 
-Nota: `virtual` permette il binding dinamico.
-La funzione può essere ridefinita nelle derivate.
+`virtual` dice: quando chiami questo metodo tramite un puntatore o una reference, guarda cosa c'è davvero dietro, non il tipo del puntatore.
 
-`Dog` e `Cat` hanno il loro verso.
+```text
+a->makeSound()
+
+con virtual    -> Cat::makeSound()     "Meow meow!"
+senza virtual  -> Animal::makeSound()  verso generico
+```
+
+Senza `virtual`, il compilatore decide quale metodo chiamare al momento della compilazione, guardando solo il tipo del puntatore. Con `virtual`, la decisione viene presa a runtime.
+
+Questo si chiama binding dinamico.
+
+Internamente funziona con una tabella di puntatori a funzione per ogni classe (la vtable). Non serve saperla implementare, ma è utile sapere che esiste: è il "costo" del polimorfismo.
 
 ## Distruttore virtuale
 
@@ -63,54 +77,121 @@ delete a;
 Con distruttore virtuale:
 
 ```text
-Dog destructor
-Animal destructor
+Dog destructor called
+Animal destructor called
 ```
 
-Senza, rischio di distruggere solo la parte base.
-Con memoria dinamica (`Brain`) può diventare leak o comportamento indefinito.
+Senza, viene chiamato solo `~Animal()`. Il distruttore di `Dog` non parte mai, e se `Dog` ha memoria sua (il `Brain` dell'ex01) è leak.
 
-## Classe astratta
+Regola pratica: se una classe ha anche un solo metodo `virtual`, il distruttore deve essere `virtual`.
 
-In ex02:
+## Override
+
+Le derivate ridefiniscono il metodo con la stessa firma:
 
 ```cpp
-virtual void makeSound() const = 0;
+void Cat::makeSound() const
+{
+    std::cout << "Meow meow!" << std::endl;
+}
 ```
 
-`= 0` = funzione virtuale pura.
+Il `virtual` basta metterlo nella base: il metodo resta virtuale anche nelle derivate.
 
-Effetto:
-- `Animal` non è più istanziabile
-- resta usabile come tipo base
-- le derivate concrete devono implementare `makeSound()`
+---
+
+# Ex00 - Polymorphism
+
+## Obiettivo
+
+Creare una gerarchia `Animal`, `Dog`, `Cat` con `makeSound()` virtuale, e una gerarchia sbagliata `WrongAnimal` / `WrongCat` per vedere cosa succede senza `virtual`.
+
+```text
+Animal               WrongAnimal
+  |-- Dog              |-- WrongCat
+  |-- Cat
+```
+
+## Animal, Dog, Cat
+
+- `Animal` ha l'attributo `type` (`protected`) e `makeSound()` virtuale
+- `Dog` imposta `type = "Dog"` nel costruttore e ridefinisce il verso
+- `Cat` imposta `type = "Cat"` e ridefinisce il verso
+
+`getType()` invece non è virtuale e non serve che lo sia: è uguale per tutti, legge solo `type`.
+
+## WrongAnimal e WrongCat
+
+Stessa struttura, ma in `WrongAnimal`:
 
 ```cpp
-Animal a; // non deve compilare
-Animal* a = new Cat(); // ok
+void makeSound() const;
 ```
 
-Idea: `Animal` è un concetto generale, non un animale concreto.
+Non è virtuale.
 
-## Deep copy
+Quindi:
 
-In ex01 arrivano i `Brain`.
+```cpp
+const WrongAnimal* wrong_cat = new WrongCat();
+wrong_cat->makeSound();
+```
 
-`Dog` e `Cat` possiedono un puntatore:
+stampa il verso di `WrongAnimal`, non quello di `WrongCat`.
+
+`WrongAnimal` non va corretto. Serve a vedere il caso sbagliato.
+
+## Test nel main
+
+Il main fa tre blocchi:
+
+1. test base del subject: `Animal`, `Dog` e `Cat` tramite `Animal*`
+2. test sbagliato: `WrongCat` tramite `WrongAnimal*`
+3. un array di `Animal*` con dentro cani e gatti, per vedere che ognuno fa il suo verso anche se l'array è dello stesso tipo
+
+---
+
+# Ex01 - I don't want to set the world on fire
+
+## Obiettivo
+
+Aggiungere la classe `Brain`, farla possedere a `Dog` e `Cat` tramite puntatore, gestire `new`/`delete` e dimostrare che le copie sono profonde.
+
+```cpp
+class Brain
+{
+    public:
+    std::string ideas[100];
+};
+```
+
+`Dog` e `Cat` hanno:
 
 ```cpp
 Brain *ideas;
 ```
 
-`Brain` contiene:
+## Gestione della memoria
+
+Ogni `Dog` e ogni `Cat` deve avere il proprio `Brain`:
+
+- `new Brain` nel costruttore
+- `delete` nel distruttore
+- copia profonda nel costruttore di copia
+- copia profonda in `operator=`
 
 ```cpp
-std::string ideas[100];
+Cat::Cat() : ideas(new(Brain)) {}
+
+Cat::~Cat()
+{
+    delete ideas;
+}
 ```
 
-Problema: copiare un `Cat` non può voler dire copiare solo il puntatore.
+## Shallow copy
 
-### Shallow copy
+Il costruttore di copia e l'`operator=` di default copiano gli attributi uno per uno. Per un puntatore, vuol dire copiare l'indirizzo:
 
 ```text
 cat1.ideas ----\
@@ -118,19 +199,19 @@ cat1.ideas ----\
 cat2.ideas ----/
 ```
 
-Rischi:
-- modifico uno, cambia anche l'altro
-- due `delete` sullo stesso puntatore
-- double free
+Problemi:
 
-### Deep copy
+- modifico le idee di uno, cambiano anche quelle dell'altro
+- quando muoiono, tutti e due fanno `delete` sullo stesso puntatore: double free
+
+## Deep copy
 
 ```text
 cat1.ideas ---> Brain A
-cat2.ideas ---> Brain B con stessi valori
+cat2.ideas ---> Brain B con gli stessi valori
 ```
 
-Nel copy constructor:
+Costruttore di copia:
 
 ```cpp
 Cat::Cat(const Cat& other) : Animal(other), ideas(new(Brain))
@@ -139,139 +220,131 @@ Cat::Cat(const Cat& other) : Animal(other), ideas(new(Brain))
 }
 ```
 
-Nota: nuovo `Brain`, stesso contenuto. Puntatori diversi.
+Alloco un `Brain` nuovo e ci copio dentro il contenuto, non l'indirizzo.
 
----
+`*ideas = *other.ideas` usa l'`operator=` di `Brain`, che copia le 100 stringhe.
 
-# Ex00 - Polymorphism
-
-## Scopo
-
-Esercizio: creare una gerarchia `Animal`, `Dog`, `Cat` con `makeSound()` virtuale, e una gerarchia sbagliata `WrongAnimal` / `WrongCat` per vedere cosa succede senza `virtual`.
-
-Gerarchia:
-
-```text
-Animal
-  |-- Dog
-  |-- Cat
-```
-
-Punti:
-- `Animal` ha `type` e `makeSound()` virtuale
-- `Dog` imposta `type = "Dog"`
-- `Cat` imposta `type = "Cat"`
-- ogni derivata ridefinisce il verso
-
-## WrongAnimal
-
-Classi dimostrative:
-
-```text
-WrongAnimal
-WrongCat
-```
-
-In `WrongAnimal`:
+Operatore di assegnazione:
 
 ```cpp
-void makeSound() const;
+Cat& Cat::operator=(const Cat& other)
+{
+    if (this != &other)
+    {
+        Animal::operator=(other);
+        *ideas = *other.ideas;
+    }
+    return (*this);
+}
 ```
 
-Non è virtuale.
+Qui il `Brain` esiste già (l'oggetto è già stato costruito), quindi non serve allocarne uno nuovo: basta copiarci dentro il contenuto.
 
-Confronto:
+L'errore classico è scrivere `ideas = other.ideas;`. Compila, sembra funzionare, ma è una shallow copy: perdo il mio `Brain` (leak) e poi due oggetti fanno `delete` sullo stesso. Nella prima versione del codice c'era proprio questo errore, sia in `Dog` sia in `Cat`.
+
+## Test nel main
 
 ```text
-Animal + virtual makeSound     -> comportamento dinamico corretto
-WrongAnimal senza virtual      -> chiamata legata al tipo del puntatore
-```
-
-Nota: `WrongAnimal` non va corretto. Serve a vedere il caso sbagliato.
-
----
-
-# Ex01 - I don't want to set the world on fire
-
-## Scopo
-
-Esercizio: aggiungere la classe `Brain`, farla possedere a `Dog` e `Cat` tramite puntatore, gestire `new`/`delete` e dimostrare che le copie sono profonde.
-
-Aggiungere `Brain` e farlo possedere a `Dog` e `Cat`.
-
-```cpp
-std::string ideas[100];
-Brain *ideas;
-```
-
-Gestione necessaria:
-- allocazione nel costruttore
-- `delete` nel distruttore
-- copia profonda nel copy constructor
-- copia profonda in `operator=`
-
-Nota: ogni `Dog` e ogni `Cat` deve avere il proprio `Brain`.
-
-## Test utile
-
-Schema mentale:
-
-```text
-creo Cat
-setto idea
-copio Cat
-modifico idea di uno
-l'altro non deve cambiare
+creo Cat a
+setto idea "fish"
+copio: Cat b = a
+cambio l'idea di b in "pizza"
+a deve avere ancora "fish"
 ```
 
 Se cambiano insieme: shallow copy.
+
+Poi il main crea un array di 100 `Animal*`, metà cani e metà gatti, e li cancella tutti tramite il puntatore base. Qui si vede perché serve il distruttore virtuale: ogni `delete` deve chiamare anche il distruttore della derivata, che libera il `Brain`.
 
 ---
 
 # Ex02 - Abstract class
 
-## Scopo
+## Obiettivo
 
-Esercizio: rendere `Animal` non istanziabile usando una funzione virtuale pura, lasciandola però come base comune per `Dog` e `Cat`.
+Rendere `Animal` non istanziabile, lasciandola però come base comune per `Dog` e `Cat`.
 
-Rendere `Animal` astratta.
+Un animale generico non esiste: esistono cani e gatti. Quindi non ha senso poter scrivere `Animal a;`.
+
+## Funzione virtuale pura
 
 ```cpp
 virtual void makeSound() const = 0;
 ```
 
-Nel `main.cpp`:
+`= 0` vuol dire: questo metodo non ha implementazione nella base, deve fornirla chi eredita.
+
+Una classe con almeno una funzione virtuale pura è una **classe astratta**:
+
+- non si può istanziare
+- si può usare come tipo per puntatori e reference
+- le derivate concrete devono implementare tutte le funzioni pure, sennò diventano astratte anche loro
+
+```cpp
+Animal a;               // non compila
+Animal* a = new Cat();  // ok
+```
+
+Nel `main.cpp` c'è la riga:
 
 ```cpp
 //Animal c;
 ```
 
-Se decommentata, la compilazione deve fallire.
+Se la decommenti, la compilazione deve fallire. È la prova che `Animal` è astratta.
 
-Nota:
-- `Dog` è un `Animal`
-- `Cat` è un `Animal`
-- un `Animal` generico non ha senso da istanziare
+La base resta interfaccia comune:
 
-La base diventa interfaccia comune:
 - tiene `type`
 - espone `getType()`
-- obbliga `makeSound()` nelle derivate
+- obbliga le derivate a implementare `makeSound()`
 
 ---
 
 # Ex03 - Interface & recap
 
-## Scopo
+Questo esercizio non è nella repo, quindi qui c'è solo l'idea generale.
 
-Esercizio: usare classi astratte come interfacce (`ICharacter`, `IMateriaSource`) e creare un sistema di Materia con `AMateria`, `Ice`, `Cure`, `Character` e `MateriaSource`.
+Mette insieme tutto il modulo con un sistema di Materia (`AMateria`, `Ice`, `Cure`, `Character`, `MateriaSource`):
 
-Qui il subject mette insieme i concetti del modulo:
-
+- interfacce, cioè classi con solo funzioni virtuali pure (`ICharacter`, `IMateriaSource`)
 - polimorfismo tramite puntatori alla base
-- classi astratte / interfacce
-- `clone()` per creare copie del tipo reale
-- inventario di massimo 4 Materia
-- gestione memoria e deep copy
+- `clone()` per copiare un oggetto senza sapere il suo tipo reale
+- deep copy di un inventario di puntatori
 
-Nota: nel repository attuale non vedo ancora la cartella `ex03`, quindi questa parte resta solo come riferimento breve al subject.
+---
+
+# Checklist finale modulo
+
+## Concetti da sapere spiegare
+
+- cos'è il polimorfismo
+- tipo statico vs tipo dinamico
+- cosa fa `virtual` e cos'è il binding dinamico
+- perché serve il distruttore virtuale
+- cosa succede con `WrongAnimal` e perché
+- differenza tra shallow copy e deep copy
+- perché costruttore di copia e `operator=` gestiscono il `Brain` in modo diverso
+- cos'è una funzione virtuale pura
+- cos'è una classe astratta e perché `Animal` deve esserlo
+
+## Errori tipici da evitare
+
+- dimenticare `virtual` su `makeSound()`
+- dimenticare il distruttore virtuale: leak quando cancello tramite `Animal*`
+- copiare il puntatore al `Brain` invece del contenuto
+- in `operator=` allocare un nuovo `Brain` senza liberare quello vecchio
+- dimenticare `Animal::operator=(other)` e non copiare `type`
+- dimenticare `delete ideas` nel distruttore di una delle due derivate
+- creare un array di N elementi e riempirne N + 1
+
+## Mini riassunto mentale
+
+```text
+ex00 -> virtual = decide il tipo reale a runtime
+        WrongAnimal = cosa succede senza
+ex01 -> Brain* in Dog e Cat
+        new nel costruttore, delete nel distruttore
+        deep copy in copia e operator=
+ex02 -> makeSound() = 0, Animal astratta
+```
