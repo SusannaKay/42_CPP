@@ -36,10 +36,13 @@ int main (int argc, char **argv){
 	switch (index){
 		case 0:
 			h.complain(0);
+			// fall through
 		case 1:
 			h.complain(1);
+			// fall through
 		case 2:
 			h.complain(2);
+			// fall through
 		case 3:
 			h.complain(3);
 			break;
