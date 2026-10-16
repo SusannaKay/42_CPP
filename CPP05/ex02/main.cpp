@@ -3,8 +3,12 @@
 #include "ShrubberyCreationForm.hpp"
 #include "RobotomyRequestForm.hpp"
 #include "PresidentialPardonForm.hpp"
+#include <cstdlib>
+#include <ctime>
 
 int main() {
+
+srand(time(NULL));
 
 Bureaucrat boss("Boss", 1);
 Bureaucrat intern("Intern", 150);

@@ -3,9 +3,13 @@
 #include "ShrubberyCreationForm.hpp"
 #include "RobotomyRequestForm.hpp"
 #include "PresidentialPardonForm.hpp"
+#include <cstdlib>
+#include <ctime>
 #include "Intern.hpp"
 
 int main() {
+
+srand(time(NULL));
 
 Intern someRandomIntern;
 
