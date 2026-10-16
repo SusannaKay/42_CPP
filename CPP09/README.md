@@ -244,11 +244,13 @@ L'algoritmo, semplificato, fa questo:
 
 1. crea coppie
 2. ordina internamente ogni coppia
-3. ordina le coppie in base al valore più grande
+3. ordina i valori più grandi delle coppie, in ricorsione con lo stesso algoritmo
 4. costruisce una main chain
 5. tiene da parte i valori pending
 6. inserisce i pending nella main chain con binary search
 7. usa Jacobsthal per ottimizzare l'ordine degli inserimenti
+
+Il dettaglio di ogni passaggio è nella sezione dell'ex02.
 
 L'algoritmo deve essere applicato su due container diversi, così possiamo confrontare le performance.
 
@@ -257,7 +259,7 @@ Per questo esercizio ha senso usare:
 - `std::vector`
 - `std::deque`
 
-Entrambi permettono accesso tramite indice e supportano `std::sort`, `lower_bound` e inserimenti nel range.
+Entrambi permettono accesso tramite indice e supportano `lower_bound` e inserimenti nel range.
 
 `vector` usa memoria contigua.
 
@@ -295,7 +297,7 @@ prices["2024-01-01"] = 42.0;
 Nel nostro caso:
 
 ```cpp
-std::map<std::string, double> _data;
+std::map<std::string, double> prices;
 ```
 
 La chiave è la data in formato stringa `YYYY-MM-DD`.
@@ -470,7 +472,8 @@ La validazione della data controlla:
 - anno valido
 - mese valido
 - giorno valido
-- anni bisestili, se gestiti
+- anni bisestili
+- anno tra 2009 e 2022, cioè il range coperto da `data.csv`
 
 Nel codice la data viene spezzata così:
 
@@ -490,7 +493,18 @@ int dayMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Così posso controllare che, ad esempio, febbraio non abbia 31 giorni.
 
-Nota da ricordare: la funzione `checkLeap()` è il punto in cui si decide se febbraio deve avere 28 o 29 giorni. Se una validazione sulle date bisestili si comporta in modo strano, quello è il primo posto da ricontrollare.
+Se l'anno è bisestile, febbraio passa a 29 giorni. Lo decide `checkLeap()`:
+
+```cpp
+static bool checkLeap(long year)
+{
+    return ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0);
+}
+```
+
+Regola: bisestile se divisibile per 4, tranne i secoli, che sono bisestili solo se divisibili per 400. Quindi 2000 sì, 1900 no.
+
+Nella prima versione avevo scritto la condizione al contrario (`return false` se divisibile per 4), quindi `2012-02-29` veniva rifiutata e `2013-02-29` accettata. Classico errore che non vedi finché non testi proprio quella data.
 
 Nel programma la data resta stringa perché così è più semplice usarla come chiave nella map.
 
@@ -731,33 +745,6 @@ Esempio:
 
 I numeri originali sono una cifra, ma il risultato nello stack è `81`.
 
-## Error handling ex01
-
-Casi da gestire:
-
-- numero di argomenti sbagliato
-- token sconosciuto, tipo `2 3 s +`
-- numero con più cifre, se non ammesso dal subject
-- operatore senza abbastanza operandi
-- divisione per zero
-- stack finale vuoto
-- stack finale con più elementi
-
-Nel main il programma accetta esattamente una stringa come argomento:
-
-```cpp
-if (argc == 2)
-    RPN ss(argv[1]);
-else
-    std::cerr << "Invalid Input" << std::endl;
-```
-
-Quindi l'espressione va passata tra virgolette, tipo:
-
-```bash
-./RPN "3 4 + 2 *"
-```
-
 ## Spiegazione funzioni
 
 Il costruttore prende gli argomenti passati dal main come stringa e chiama subito:
@@ -840,6 +827,33 @@ if (num2 == 0)
 
 Alla fine controllo che lo stack abbia size `== 1` e stampo il risultato.
 
+## Error handling ex01
+
+Casi da gestire:
+
+- numero di argomenti sbagliato
+- token sconosciuto, tipo `2 3 s +`
+- numero con più cifre, se non ammesso dal subject
+- operatore senza abbastanza operandi
+- divisione per zero
+- stack finale vuoto
+- stack finale con più elementi
+
+Nel main il programma accetta esattamente una stringa come argomento:
+
+```cpp
+if (argc == 2)
+    RPN ss(argv[1]);
+else
+    std::cerr << "Invalid Input" << std::endl;
+```
+
+Quindi l'espressione va passata tra virgolette, tipo:
+
+```bash
+./RPN "3 4 + 2 *"
+```
+
 ---
 
 # Ex02 - PmergeMe
@@ -870,7 +884,7 @@ Il formato del tempo lo scegliamo noi, ma la precisione deve permettere di veder
 
 I duplicati il subject dice che possiamo gestirli come vogliamo.
 
-Nel mio caso li considero validi se il parsing li accetta, oppure posso decidere di rifiutarli: l'importante è essere coerenti.
+Nel mio caso li accetto: l'algoritmo funziona lo stesso e nell'output compaiono più volte, uno vicino all'altro.
 
 ## Vector e deque
 
@@ -885,7 +899,6 @@ Pro:
 - accesso per indice molto veloce
 - cache friendly
 - ottimo per scorrere tanti elementi
-- `std::sort` funziona bene
 
 Contro:
 
@@ -909,6 +922,8 @@ Contro:
 
 Per questo ex sono una buona coppia da confrontare: hanno interfaccia simile, ma memoria diversa.
 
+Spoiler: con 3000 numeri di solito vince il vector. Gli inserimenti in mezzo costano O(n) per entrambi, ma spostare memoria contigua è più veloce che saltare tra blocchi.
+
 ## Ford-Johnson / Merge-insert sort
 
 L'idea generale è ridurre il numero di confronti.
@@ -919,11 +934,17 @@ Il flusso mentale è:
 
 1. creo coppie
 2. in ogni coppia metto prima il piccolo e poi il grande
-3. ordino le coppie guardando i grandi
+3. ordino i grandi **con lo stesso algoritmo**, cioè in ricorsione
 4. costruisco una main chain con i grandi ordinati
 5. tengo i piccoli come pending
 6. inserisco i pending nella main chain usando binary search
 7. uso Jacobsthal per scegliere in quale ordine inserire i pending
+
+Il punto 3 è quello che fa la differenza.
+
+Se i grandi li ordino con `std::sort`, l'output esce ordinato lo stesso, ma non è più Ford-Johnson: la parte "merge" dell'algoritmo è proprio questa ricorsione.
+
+La prima versione del mio codice faceva esattamente questo errore. Funzionava, ma non era l'algoritmo richiesto.
 
 ## Esempio passo per passo
 
@@ -941,13 +962,11 @@ Input:
 (9,2)
 ```
 
-Se i numeri sono dispari, l'ultimo rimane fuori e lo salvo in una variabile separata.
-
-Nel codice questa variabile è `_left`.
+Se i numeri sono dispari, l'ultimo rimane fuori. Lo chiamo straggler e lo inserisco alla fine insieme ai pending.
 
 ### Step 2 - ordino internamente le coppie
 
-Metto il minore in `first` e il maggiore in `second`.
+Metto il minore prima e il maggiore dopo.
 
 ```text
 (3,8)
@@ -955,26 +974,30 @@ Metto il minore in `first` e il maggiore in `second`.
 (2,9)
 ```
 
-Per rappresentare le coppie uso:
+Qui faccio un confronto per ogni coppia.
 
-```cpp
-std::pair<int, int>
-```
+### Step 3 - ordino i grandi in ricorsione
 
-### Step 3 - ordino le coppie per valore grande
-
-Ordino le coppie guardando `second`.
+I grandi sono:
 
 ```text
-(1,7)
-(3,8)
-(2,9)
+8 7 9
 ```
 
-A questo punto i secondi sono ordinati:
+Su questi richiamo lo stesso algoritmo: coppie, grandi, ricorsione, inserimento. Si scende finché resta un solo elemento, che è già ordinato per definizione.
+
+Quando la ricorsione torna su, i grandi sono ordinati:
 
 ```text
 7 8 9
+```
+
+E di conseguenza anche le coppie, se le leggo seguendo i grandi:
+
+```text
+(1,7)
+(3,8)
+(2,9)
 ```
 
 ### Step 4 - costruisco la main chain
@@ -982,7 +1005,7 @@ A questo punto i secondi sono ordinati:
 La main chain parte con:
 
 - il piccolo della prima coppia
-- tutti i grandi delle coppie ordinate
+- tutti i grandi ordinati
 
 Quindi:
 
@@ -992,11 +1015,11 @@ Quindi:
 
 Perché inserisco subito il piccolo della prima coppia?
 
-Perché se la prima coppia è `(1,7)`, so già che `1 < 7`, e dato che `7` è il primo dei grandi ordinati, `1` può stare all'inizio della main chain.
+Perché se la prima coppia è `(1,7)`, so già che `1 < 7`, e dato che `7` è il più piccolo dei grandi, `1` può stare all'inizio della main chain senza fare nessun confronto.
 
 ### Step 5 - creo i pending
 
-I pending sono i piccoli delle altre coppie.
+I pending sono i piccoli delle altre coppie, più lo straggler se c'è.
 
 Nel nostro esempio:
 
@@ -1004,73 +1027,75 @@ Nel nostro esempio:
 3 2
 ```
 
-Il piccolo della prima coppia è già stato inserito nella main chain, quindi non va nei pending.
-
 ### Step 6 - inserisco i pending con lower_bound
 
-Per ogni pending cerco la posizione corretta nella main chain.
-
-Uso:
+Per ogni pending cerco la posizione corretta nella main chain:
 
 ```cpp
-it = std::lower_bound(mainchain.begin(), mainchain.end(), value);
+it = std::lower_bound(mainchain.begin(), bound, value, comp);
 mainchain.insert(it, value);
 ```
 
-`lower_bound` funziona perché la main chain è già ordinata.
+`lower_bound` funziona perché la main chain è sempre ordinata.
 
-### Step 7 - inserisco lo straggler
+Il dettaglio importante è `bound`: non cerco su tutta la main chain, ma solo fino al grande della sua coppia.
 
-Se l'input aveva un numero dispari di elementi, resta un numero spaiato.
+Esempio: `3` viene dalla coppia `(3,8)`. So già che `3 < 8`, quindi è inutile cercare dopo `8`.
 
-Lo inserisco alla fine con lo stesso metodo:
-
-```cpp
-lower_bound + insert
+```text
+main chain: 1 7 8 9
+cerco 3 solo qui: 1 7
 ```
 
-## std::pair
+Meno elementi nel range = meno confronti nella binary search.
 
-`std::pair<int, int>` crea sostanzialmente una mini struct con due campi:
+Lo straggler invece non ha un grande, quindi per lui il range è tutta la main chain.
 
-- `first`
-- `second`
+Risultato finale:
 
-Esempio:
-
-```cpp
-std::pair<int, int> p(3, 8);
+```text
+1 2 3 7 8 9
 ```
 
-oppure:
+## Duplicati e partner: perché lavoro sugli indici
 
-```cpp
-std::pair<int, int> p = std::make_pair(3, 8);
+Dopo la ricorsione ho i grandi ordinati, ma per ogni grande devo ritrovare il suo piccolo.
+
+Se cerco per valore, con i duplicati è un casino: se ho due `8`, quale coppia è quale?
+
+La soluzione che ho usato: l'algoritmo non sposta i valori, ma i loro **indici** nel container originale.
+
+```text
+val:  8 3 7 1 9 2
+idx:  0 1 2 3 4 5
 ```
 
-Accesso:
+Gli indici sono unici anche se i valori si ripetono, quindi posso salvare il partner così:
 
 ```cpp
-p.first
-p.second
+partner[big] = small;
 ```
 
-Comparazione standard tra pair:
+e ritrovarlo dopo in O(1).
 
-- prima confronta `first`
-- se `first` è uguale, confronta `second`
-
-Nel nostro caso però vogliamo ordinare le coppie in base a `second`, quindi serve una funzione di comparazione custom.
-
-Esempio:
+I confronti però li faccio sempre sui valori, con un comparatore:
 
 ```cpp
-static bool comparePair(const std::pair<int, int> &a,
-                        const std::pair<int, int> &b)
+template <typename C>
+struct CompareIdx
 {
-    return (a.second < b.second);
-}
+    const C *_val;
+
+    bool operator()(size_t a, size_t b) const
+    {
+        return ((*_val)[a] < (*_val)[b]);
+    }
+};
 ```
+
+È un functor: una struct con `operator()`, che si usa come se fosse una funzione. Lo passo a `lower_bound` come quarto parametro.
+
+Alla fine trasformo gli indici ordinati nei valori ordinati e ho il risultato.
 
 ## Jacobsthal
 
@@ -1108,59 +1133,71 @@ Quindi la sequenza completa parte così:
 0 1 1 3 5 11 21 43 ...
 ```
 
-Per il nostro uso pratico ignoriamo lo 0 e usiamo indici 1-based:
-
-```text
-1 3 5 11 21 43 ...
-```
-
 ### Che sono questi numeri?
 
 Sono limiti di gruppi.
 
-Prendiamo:
+Per ragionare chiamo i piccoli `b1, b2, b3, ...` e i grandi `a1, a2, a3, ...`, nell'ordine della main chain. Quindi `b2` è il piccolo della coppia di `a2`.
+
+`b1` è già nella main chain (step 4), quindi si parte da `b2`.
+
+I gruppi sono:
 
 ```text
-1 3 5 11
+(1, 3]   -> b3 b2
+(3, 5]   -> b5 b4
+(5, 11]  -> b11 b10 b9 b8 b7 b6
+(11, 21] -> b21 ... b12
 ```
 
-Significa:
+Cioè ogni gruppo viene inserito al contrario, dal più alto al più basso.
+
+Quindi l'ordine finale diventa:
 
 ```text
-1
-3 2
-5 4
-11 10 9 8 7 6
-```
-
-Cioè ogni gruppo viene inserito al contrario.
-
-Quindi l'ordine finale degli indici diventa:
-
-```text
-1, 3, 2, 5, 4, 11, 10, 9, 8, 7, 6, ...
+b3, b2, b5, b4, b11, b10, b9, b8, b7, b6, ...
 ```
 
 Ovviamente se ho meno pending, mi fermo alla size reale.
 
-Esempio: se ho 4 pending, l'ordine sarà:
+Esempio: se ho `b2 b3 b4`, l'ordine sarà:
 
 ```text
-1, 3, 2, 4
+b3, b2, b4
 ```
 
-Perché `5` sarebbe fuori range.
+Perché `b5` non esiste.
 
 ### Perché serve?
 
-La parte matematica seria del Ford-Johnson dimostra che questo ordine riduce il numero di confronti necessari negli inserimenti binari.
+Perché con quest'ordine ogni binary search lavora su un range di dimensione `2^k - 1` (3, 7, 15, ...), che è il caso migliore per la binary search: il range si dimezza pulito a ogni confronto, senza sprecarne uno.
+
+Questo funziona solo se il range è limitato al grande della coppia (il `bound` di prima). Se cercassi su tutta la main chain, l'ordine Jacobsthal non servirebbe a niente.
 
 Evito di approfondire troppo l'analisi matematica sennò finisco fra un paio di anni di capire questo esercizio, però il concetto utile per implementarlo è:
 
 - creo la sequenza Jacobsthal
 - genero gruppi di indici
 - inserisco ogni gruppo al contrario
-- uso quegli indici per scegliere quale pending inserire
+- ogni pending lo cerco solo fino al suo grande
+
+### Come verificare che sia davvero Ford-Johnson
+
+Il Ford-Johnson ha un numero massimo di confronti noto:
+
+```text
+F(n) = somma per k da 1 a n di ceil(log2(3k / 4))
+```
+
+Per verificarlo ho messo un contatore dentro il comparatore (solo in una copia di test, non nel codice consegnato) e ho confrontato con la formula:
+
+| Elementi | Confronti fatti | Massimo teorico |
+| -------- | --------------- | --------------- |
+| 21       | 65              | 66              |
+| 100      | 525             | 534             |
+| 3000     | 30358           | 30546           |
+
+Se il contatore supera il massimo teorico, qualcosa non va: o manca la ricorsione, o il range della binary search è sbagliato, o l'ordine Jacobsthal è sfasato.
 
 ## Funzione jacobVect / jacobDeq
 
@@ -1176,126 +1213,107 @@ Questo rispetta l'idea del subject: implementare il procedimento su entrambi i c
 Il procedimento è:
 
 1. parto da `0` e `1`
-2. genero la sequenza con la formula Jacobsthal
-3. creo un vettore/deque finale di indici
-4. per ogni intervallo Jacobsthal, pusho gli indici al contrario
-5. ritorno l'ordine finale
+2. genero la sequenza con la formula Jacobsthal finché supero la size
+3. per ogni intervallo Jacobsthal, pusho gli indici al contrario
+4. ritorno l'ordine finale
 
 Esempio concettuale:
 
 ```text
 Jacobsthal: 1 3 5
-Ordine:     1 3 2 5 4
+Ordine:     3 2 5 4
 ```
 
-Nel codice poi uso `id = jacob[i] - 1` perché i pending sono indicizzati da 0, mentre l'ordine Jacobsthal lo ragiono da 1.
+Gli indici ritornati sono quelli `b`, 1-based e con `b1` già inserito. Nel codice i pending partono da `b2` in posizione 0, quindi uso:
+
+```cpp
+size_t id = jacob[i] - 2;
+```
+
+Il `-2` è il classico punto dove ci si sbaglia: `-1` perché il container è 0-based, l'altro `-1` perché `b1` non sta nei pending.
 
 ## Ordine di chiamata delle funzioni
-
-Flusso del programma:
 
 ```text
 main
 │
-└── crea vector<int> input
-    │
-    ├── valida argomenti
-    ├── stampa Before
-    └── PmergeMe::process()
-         │
-         ├── processVector()
-         │    │
-         │    ├── sort delle coppie per second
-         │    ├── build main chain vector
-         │    ├── build pending vector
-         │    ├── genera ordine Jacobsthal
-         │    ├── inserisce pending con lower_bound
-         │    └── inserisce _left se presente
-         │
-         └── processDeque()
-              │
-              ├── sort delle coppie per second
-              ├── build main chain deque
-              ├── build pending deque
-              ├── genera ordine Jacobsthal
-              ├── inserisce pending con lower_bound
-              └── inserisce _left se presente
+├── valida argomenti -> vector<int> input
+├── stampa Before
+└── PmergeMe::process()
+     │
+     ├── processVector()       <- timer vector
+     │    ├── copia input in vector<int> + indici
+     │    └── mergeInsertVect()
+     │         ├── coppie + partner
+     │         ├── mergeInsertVect() sui grandi (ricorsione)
+     │         ├── mainVector(): main chain + pending
+     │         ├── jacobVect(): ordine di inserimento
+     │         └── lower_bound limitato + insert
+     │
+     ├── processDeque()        <- timer deque
+     │    └── stessa cosa con deque
+     │
+     └── stampa After e i due tempi
 ```
 
-## Spiegazione del costruttore PmergeMe
+## Spiegazione funzioni
 
-Il costruttore riceve un `std::vector<int> input`.
+### Costruttore PmergeMe
 
-Prima controlla se la size è dispari.
+Il costruttore riceve un `std::vector<int> input` e se lo salva così com'è in `_input`.
 
-Se è dispari, salva l'ultimo elemento in `_left`.
+Non fa nessun lavoro: le coppie le crea ogni container per conto suo, dentro il timer. Così il tempo misurato include anche la gestione dei dati, come chiede il subject.
+
+### processVector / processDeque
+
+1. copia `_input` nel proprio container di valori
+2. crea il container di indici `0 1 2 ... n-1`
+3. chiama `mergeInsertVect()` (o `mergeInsertDeq()`)
+4. trasforma gli indici ordinati nei valori e li ritorna
+
+### mergeInsertVect / mergeInsertDeq
+
+È la funzione ricorsiva vera e propria.
 
 ```cpp
-if (input.size() % 2 != 0)
-    _left = input[input.size() - 1];
+if (idx.size() < 2)
+    return;
 ```
 
-Poi scorre l'input a due a due:
+Caso base: con 0 o 1 elemento non c'è niente da ordinare.
+
+Poi:
+
+- scorre gli indici a due a due, confronta i valori, salva il grande in `bigs` e il piccolo in `partner[big]`
+- richiama se stessa su `bigs`
+- costruisce main chain e pending con `mainVector()`
+- aggiunge lo straggler ai pending se la size è dispari
+- inserisce i pending in ordine Jacobsthal con `lower_bound` limitato al grande
+
+Il limite lo trovo così:
 
 ```cpp
-for (size_t i = 0; i + 1 < input.size(); i += 2)
+if (id + 1 < bigs.size())
+    bound = std::find(mainchain.begin(), mainchain.end(), bigs[id + 1]);
+else
+    bound = mainchain.end();
 ```
 
-Per ogni coppia:
+`std::find` qui cerca un indice, non un valore, quindi non conta come confronto dell'algoritmo. Il ramo `else` è lo straggler.
 
-- prende `a`
-- prende `b`
-- mette il minore in `first`
-- mette il maggiore in `second`
-- salva la coppia sia nel vector che nel deque
+### mainVector / mainDeque
 
-Quindi `_vect` e `_deq` contengono le stesse coppie, ma in container diversi.
-
-## processVector
-
-`processVector()` fa il sort usando `std::vector`.
-
-Passaggi:
-
-1. crea `mainchain`
-2. crea `pending`
-3. ordina `_vect` con `std::sort` e `comparePair`
-4. chiama `mainVector(mainchain, pending)`
-5. genera l'ordine Jacobsthal
-6. inserisce i pending nella mainchain con `lower_bound`
-7. inserisce `_left` se esiste
-8. ritorna la mainchain ordinata
-
-## mainVector
-
-`mainVector()` costruisce mainchain e pending.
-
-Fa:
+Costruisce main chain e pending:
 
 ```cpp
-mainchain.push_back(_vect[0].first);
+mainchain.push_back(partner[bigs[0]]);
+for (size_t i = 0; i < bigs.size(); i++)
+    mainchain.push_back(bigs[i]);
+for (size_t i = 1; i < bigs.size(); i++)
+    pending.push_back(partner[bigs[i]]);
 ```
 
-cioè inserisce il piccolo della prima coppia.
-
-Poi inserisce tutti i grandi:
-
-```cpp
-for (...) mainchain.push_back(_vect[i].second);
-```
-
-Poi inserisce nei pending tutti i piccoli tranne quello della prima coppia:
-
-```cpp
-for (size_t i = 1; i < _vect.size(); i++)
-    pending.push_back(_vect[i].first);
-```
-
-## processDeque
-
-`processDeque()` è uguale come logica a `processVector()`, ma usa `std::deque`.
-
-La duplicazione serve perché il subject vuole confrontare due container diversi.
+Cioè: il piccolo della prima coppia, poi tutti i grandi, poi nei pending tutti gli altri piccoli.
 
 ## Timing
 
@@ -1315,7 +1333,7 @@ Poi converto in microsecondi:
 (static_cast<double>(elapsed) / CLOCKS_PER_SEC) * 1000000.0
 ```
 
-Questo permette di stampare tempi piccoli in modo più leggibile.
+Il subject dice che il tempo deve includere sia il sort sia la gestione dei dati. Per questo dentro il timer c'è anche la copia dell'input nel container: se creassi le coppie nel costruttore, prima di far partire il timer, il tempo misurato sarebbe falsato.
 
 Su input piccoli la differenza può essere rumorosa o quasi invisibile.
 
@@ -1330,7 +1348,8 @@ Casi da gestire:
 - numeri negativi
 - overflow di `int`
 - stringhe tipo `12abc`
-- input vuoto
+- stringa vuota `""`
+- spazi o segno davanti, tipo `" 42"` o `"+42"`
 
 Nel main uso `strtol` perché mi permette di controllare anche dove si ferma la conversione.
 
@@ -1351,30 +1370,33 @@ Esempio:
 
 Quindi devo considerarlo errore.
 
+Però `strtol` da solo non basta: accetta in silenzio la stringa vuota (la converte in `0` con `end` già su `'\0'`), gli spazi iniziali e il `+`.
+
+Per questo prima controllo che la stringa sia fatta solo di cifre:
+
+```cpp
+static bool isNumber(const char *str)
+{
+    if (!str[0])
+        return false;
+    for (size_t i = 0; str[i]; i++)
+    {
+        if (!isdigit(static_cast<unsigned char>(str[i])))
+            return false;
+    }
+    return true;
+}
+```
+
 Controllo anche:
 
 ```cpp
 num < 0 || num > INT_MAX
 ```
 
-per accettare solo integer positivi nel range di `int`.
+per accettare solo integer nel range di `int`.
 
-## Nota importante sul Ford-Johnson
-
-Il Ford-Johnson completo è più raffinato della versione intuitiva "crea coppie + inserisci pending".
-
-La parte importante per questo modulo è dimostrare di aver capito:
-
-- divisione in coppie
-- ordinamento interno delle coppie
-- main chain
-- pending
-- inserimento binario
-- ordine Jacobsthal
-- confronto tra due container
-- misurazione dei tempi
-
-Quindi se il codice produce un output ordinato, gestisce gli errori e mostra chiaramente le differenze tra container, l'esercizio è concettualmente centrato.
+Lo `0` lo accetto. Il subject dice "positive integers", quindi a rigore si potrebbe rifiutare: è una scelta, l'importante è saperla motivare in correzione.
 
 ---
 
@@ -1393,7 +1415,8 @@ Quindi se il codice produce un output ordinato, gestisce gli errori e mostra chi
 - ordine corretto degli operandi in RPN
 - perché vector e deque sono adatti a ex02
 - differenza tra memoria contigua e memoria a blocchi
-- cos'è una pair
+- cos'è un functor e perché lo passo a `lower_bound`
+- perché il Ford-Johnson ordina i grandi in ricorsione
 - cos'è la main chain
 - cosa sono i pending
 - a cosa serve Jacobsthal
@@ -1406,10 +1429,15 @@ Quindi se il codice produce un output ordinato, gestisce gli errori e mostra chi
 - invertire left/right in RPN
 - dimenticare il controllo divisione per zero
 - usare `std::sort` direttamente sull'input finale in ex02 e basta
+- usare `std::sort` per ordinare le coppie: l'output è giusto, ma non è Ford-Johnson
+- fare la binary search su tutta la main chain invece che fino al grande della coppia
 - dimenticare lo straggler quando gli elementi sono dispari
-- usare indici Jacobsthal 1-based direttamente su container 0-based
-- fidarsi di `strtol` senza controllare `end`
+- sfasare gli indici Jacobsthal: sono 1-based e `b1` è già nella main chain
+- ritrovare i partner per valore quando ci sono duplicati
+- fidarsi di `strtol` senza controllare `end`, e senza scartare `""`, spazi e `+`
+- far partire il timer dopo aver già preparato i dati
 - stampare tempi con precisione troppo bassa
+- invertire la condizione degli anni bisestili
 
 ## Mini riassunto mentale
 
@@ -1422,4 +1450,5 @@ perché RPN lavora sempre sugli ultimi due valori disponibili
 
 ex02 -> vector + deque
 perché devo confrontare due container indicizzabili applicando Ford-Johnson
+coppie -> ricorsione sui grandi -> main chain -> pending in ordine Jacobsthal
 ```
