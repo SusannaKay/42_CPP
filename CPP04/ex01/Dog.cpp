@@ -17,8 +17,8 @@ Dog& Dog::operator=(const Dog& other)
 	std::cout << "Dog assignment operator called" << std::endl;
 	if (this != &other)
 	{
-		this->type = other.type;
-		this->ideas = other.ideas;
+		Animal::operator=(other);
+		*ideas = *other.ideas;
 	}
 	return (*this);
 }
