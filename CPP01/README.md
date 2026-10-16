@@ -10,7 +10,7 @@
 - puntatori a funzioni membro
 - `switch` e fallthrough
 
-Scopo: creare oggetti non basta. In questo modulo il punto è capire dove vivono, chi li possiede, quando muoiono e quale sintassi usare per manipolare memoria, reference, file e chiamate a metodi.
+Creare oggetti non basta. In questo modulo il punto è capire dove vivono, chi li possiede, quando muoiono e quale sintassi usare per manipolare memoria, reference, file e chiamate a metodi.
 
 ---
 
@@ -47,11 +47,9 @@ delete heapZombie;
 
 # Ex00 - BraiiiiiiinnnzzzZ
 
-## Scopo
+## Obiettivo
 
 Creare una classe `Zombie`, farla annunciare e confrontare due modi di crearla: una funzione che ritorna uno zombie nell' heap e una funzione che crea uno zombie temporaneo nello stack.
-
-Classe `Zombie`. Differenza stack / heap.
 
 Funzioni:
 
@@ -109,7 +107,7 @@ L'idea è usare i log per vedere il ciclo di vita degli oggetti.
 
 # Ex01 - Moar brainz!
 
-## Scopo
+## Obiettivo
 
 Creare una horde, cioè un array dinamico di `Zombie`, con una sola allocazione e poi liberarlo correttamente.
 
@@ -167,11 +165,9 @@ zombie 2
 
 # Ex02 - HI THIS IS BRAIN
 
-## Scopo
+## Obiettivo
 
 Stampare indirizzi e valori di una stringa, di un puntatore alla stringa e di una reference alla stringa. Serve a vedere che reference e puntatore possono riferirsi allo stesso dato, ma con sintassi diversa.
-
-Puntatore vs reference.
 
 Nel codice:
 
@@ -224,9 +220,9 @@ Stesso dato, sintassi diversa.
 
 # Ex03 - Unnecessary violence
 
-## Scopo
+## Obiettivo
 
-Creare `Weapon`, `HumanA` e `HumanB` per capire quando una classe deve contenere una reference e quando invece ha più senso usare un puntatore. Reference e puntatore dentro classi.
+Creare `Weapon`, `HumanA` e `HumanB` per capire quando una classe deve contenere una reference e quando invece ha più senso usare un puntatore.
 
 Classi:
 
@@ -290,15 +286,15 @@ Poi `attack()` stampa il nuovo tipo.
 
 # Ex04 - Sed is for losers
 
-## Scopo
+## Obiettivo
 
-Rifare un mini comportamento tipo `sed`: leggere un file, sostituire tutte le occorrenze di una stringa con un'altra e scrivere il risultato in un nuovo file.
-
-Leggere un file, sostituire tutte le occorrenze di `s1` con `s2`, scrivere:
+Rifare un mini comportamento tipo `sed`: leggere un file, sostituire tutte le occorrenze di una stringa con un'altra e scrivere il risultato in un nuovo file:
 
 ```text
 <filename>.replace
 ```
+
+Il subject vieta `std::string::replace`, quindi la sostituzione va costruita a mano con `find` e `substr`.
 
 File stream:
 
@@ -306,13 +302,6 @@ File stream:
 std::ifstream file(filename.c_str());
 std::ofstream new_file(outname.c_str());
 ```
-
-## Controlli
-
-- numero di argomenti
-- `s1` non vuota
-- input file aperto
-- output file creato
 
 ## Sostituzione
 
@@ -331,15 +320,28 @@ result += s2;
 pos = found + s1.length();
 ```
 
+Dopo ogni sostituzione riparto a cercare **dopo** `s1` (`found += s1.length()`), non dall'inizio. Altrimenti ritrovo sempre la stessa occorrenza e il ciclo non finisce più.
+
+E siccome costruisco una stringa nuova (`result`) invece di modificare `line`, non ho problemi neanche se `s2` contiene `s1`, tipo `s1 = "a"` e `s2 = "aa"`.
+
+## Error handling ex04
+
+- numero di argomenti diverso da 3
+- `s1` vuota: `find("")` trova una occorrenza ovunque, quindi va rifiutata
+- file di input che non si apre
+- file di output che non si crea
+
+Nota: leggo con `getline` e riscrivo ogni riga con `std::endl`, quindi se il file originale non finisce con un newline, il `.replace` ce l'avrà comunque.
+
 ---
 
 # Ex05 - Harl 2.0
 
-## Scopo
+## Obiettivo
 
 Creare una classe `Harl` che stampa messaggi diversi in base al livello richiesto, usando puntatori a funzioni membro invece di una catena infinita di `if/else`.
 
-Classe `Harl`, messaggi per livello:
+Livelli:
 
 ```text
 DEBUG
@@ -371,16 +373,31 @@ Schema:
 1. trovare indice del livello
 2. chiamare il metodo corrispondente
 
+Nel codice:
+
+```cpp
+for (int i = 0; i < 4; i++)
+{
+    if (level == levels[i])
+    {
+        (this->*actions[i])();
+        return;
+    }
+}
+```
+
+`this->*` serve perché un metodo ha bisogno di un oggetto su cui essere chiamato. Il puntatore da solo dice "quale metodo", `this` dice "su chi".
+
+Se il livello non esiste, stampo un messaggio di errore.
+
 
 ---
 
 # Ex06 - Harl filter
 
-## Scopo
+## Obiettivo
 
 Filtrare i messaggi di `Harl`: dato un livello, stampare quel livello e tutti quelli più gravi usando uno `switch` con fallthrough voluto.
-
-Stampare i messaggi da un livello in poi.
 
 Esempio:
 
@@ -422,3 +439,46 @@ case 3:
 
 Da `INFO` scende anche su `WARNING` ed `ERROR`.
 
+Il fallthrough è voluto, quindi nel codice c'è un commento `// fall through` dopo ogni caso. Alcuni compilatori (gcc con `-Wextra`) altrimenti danno warning, e con `-Werror` non compila.
+
+Il caso `default` stampa il messaggio di livello non valido.
+
+---
+
+# Checklist finale modulo
+
+## Concetti da sapere spiegare
+
+- differenza tra stack e heap
+- quando un oggetto viene distrutto in automatico e quando serve `delete`
+- `new` / `delete` vs `new[]` / `delete[]`
+- perché `new Zombie[N]` richiede un costruttore di default
+- differenza tra puntatore e reference
+- perché `HumanA` usa una reference e `HumanB` un puntatore
+- perché una reference membro va inizializzata nella initialization list
+- `std::ifstream` / `std::ofstream` e perché si passa `.c_str()` in C++98
+- sintassi dei puntatori a funzioni membro e `this->*`
+- `switch` con fallthrough
+
+## Errori tipici da evitare
+
+- usare `delete` su un array allocato con `new[]` (o il contrario)
+- dimenticare `delete` sugli zombie creati con `newZombie`
+- usare una reference per `HumanB`, che all'inizio non ha arma
+- non controllare `NULL` prima di usare il puntatore all'arma
+- in ex04 ripartire a cercare dall'inizio della riga dopo ogni sostituzione
+- in ex04 accettare `s1` vuota
+- in ex05 usare una catena di `if/else` invece dei puntatori a metodi
+- in ex06 dimenticare il `break` dopo l'ultimo caso
+
+## Mini riassunto mentale
+
+```text
+ex00 -> stack vs heap
+ex01 -> new[] / delete[]
+ex02 -> puntatore e reference sullo stesso dato
+ex03 -> reference se c'è sempre, puntatore se può mancare
+ex04 -> file stream + find/substr
+ex05 -> array di puntatori a metodi
+ex06 -> switch con fallthrough
+```
