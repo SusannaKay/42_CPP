@@ -19,6 +19,11 @@ int main(int, char**)
     {
         Array<int> tmp = numbers;
         Array<int> test(tmp);
+        Array<int> assigned;
+        assigned = numbers;
+        assigned[0] = -1;
+        if (numbers[0] == -1)
+            std::cerr << "operator= made a shallow copy!!" << std::endl;
     }
 
     for (int i = 0; i < MAX_VAL; i++)

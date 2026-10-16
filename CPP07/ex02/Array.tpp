@@ -2,7 +2,7 @@
 
 template <typename T> Array<T>::Array(): _array(NULL), _size(0){}
 
-template <typename T> Array<T>::Array(unsigned int n) : _array(new T[n]), _size(n){}
+template <typename T> Array<T>::Array(unsigned int n) : _array(new T[n]()), _size(n){}
 
 template <typename T> Array<T>::Array(const Array <T>&other) : _array(new T[other.size()]), _size(other.size()){
 
@@ -10,7 +10,7 @@ template <typename T> Array<T>::Array(const Array <T>&other) : _array(new T[othe
           _array[i] = other._array[i];
 }
 
-template <typename T> Array<T> &Array<T>::operator=(Array<T> &other){
+template <typename T> Array<T> &Array<T>::operator=(const Array<T> &other){
 
     if (this != &other){
         if (_array)
