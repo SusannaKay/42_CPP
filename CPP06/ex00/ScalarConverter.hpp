@@ -7,6 +7,7 @@
 #include <cstring>
 #include <limits.h>
 #include <cstdlib>
+#include <cmath>
 
 class ScalarConverter {
 
