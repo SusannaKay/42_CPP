@@ -1,5 +1,9 @@
 # CPP08 - Templated containers, iterators, algorithms
 
+Primo modulo sulla STL. Da qui in poi si possono usare i container e gli algoritmi della libreria standard, e il punto è capire quale usare e perché. CPP09 riparte esattamente da qui.
+
+Cose nuove:
+
 - container
 - iteratori
 - algoritmi
@@ -472,9 +476,9 @@ Così lo stesso algoritmo funziona su container diversi.
 
 ---
 
-# Ex00 - easyfind
+# Ex00 - Easy find
 
-## Scopo
+## Obiettivo
 
 Devo scrivere una funzione generica che trovi un intero dentro un container di interi, senza sapere che tipo di container sia.
 
@@ -605,7 +609,7 @@ Nota: la stessa funzione template lavora su container diversi.
 
 # Ex01 - Span
 
-## Idea
+## Obiettivo
 
 Devo creare una classe `Span` che può contenere al massimo N numeri.
 
@@ -763,7 +767,7 @@ Stile STL: lavoro su range, non sulla provenienza dei dati.
 
 Per trovare la distanza minima conviene ordinare i numeri.
 
-Perché:  la distanza minima sarà sempre tra due elementi vicini nell'ordine crescente.
+Perché: la distanza minima sarà sempre tra due elementi vicini nell'ordine crescente.
 
 Esempio:
 
@@ -790,7 +794,18 @@ Nel codice:
 std::sort(_numbers.begin(), _numbers.end());
 ```
 
-Poi confronto le differenze tra elementi consecutivi.
+Poi confronto le differenze tra elementi consecutivi:
+
+```cpp
+int shortest = _numbers[1] - _numbers[0];
+for (size_t i = 1; i + 1 < _numbers.size(); i++)
+{
+    if (_numbers[i + 1] - _numbers[i] < shortest)
+        shortest = _numbers[i + 1] - _numbers[i];
+}
+```
+
+Attenzione al ciclo: dentro uso `_numbers[i + 1]`, quindi devo fermarmi prima dell'ultimo elemento. La condizione è `i + 1 < size`, non `i < size`. Con `i < size`, all'ultimo giro leggo un elemento fuori dal vector, e senza un controllo tipo AddressSanitizer non te ne accorgi neanche (nella prima versione del codice c'era proprio questo errore).
 
 Concetto importante: `std::sort` modifica il vector originale.
 
@@ -798,21 +813,29 @@ Quindi dopo `shortestSpan()` i numeri restano ordinati.
 
 ## longestSpan
 
-Per trovare la distanza massima, dopo il sort, basta fare:
+La distanza massima è sempre tra il numero più piccolo e il più grande:
 
 ```text
-ultimo - primo
+max - min
 ```
 
-Perché il più piccolo sarà all'inizio e il più grande alla fine.
-
-Nel codice attuale viene calcolato scorrendo le differenze, ma concettualmente il longest span più diretto è:
+Non serve neanche ordinare. Uso due algoritmi STL:
 
 ```cpp
-_numbers.back() - _numbers.front();
+int max = *std::max_element(_numbers.begin(), _numbers.end());
+int min = *std::min_element(_numbers.begin(), _numbers.end());
+return max - min;
 ```
 
-Sempre dopo aver ordinato.
+`max_element` e `min_element` ritornano un iteratore, quindi serve `*` per leggere il valore. Costo O(n), meglio del sort che è O(n log n).
+
+Occhio a non confondere il longest span con "la differenza più grande tra due numeri vicini". Con:
+
+```text
+3 6 9 11 17
+```
+
+il salto più grande tra vicini è `17 - 11 = 6`, ma il longest span è `17 - 3 = 14`. La prima versione del codice calcolava il salto tra vicini, e col test del subject il risultato era sbagliato.
 
 ## Error handling ex01
 
@@ -820,6 +843,8 @@ Ci sono due eccezioni custom:
 
 - `SpanFull`
 - `NotEnoughNumbers`
+
+Il controllo è `size() < 2` in entrambe le funzioni: con esattamente 2 numeri lo span esiste.
 
 `SpanFull` viene lanciata se provo ad aggiungere più numeri della capacità massima.
 
@@ -855,26 +880,6 @@ Infine stampa:
 
 Nota: verifica anche tanti numeri, non solo il test piccolo del subject.
 
-## Nota da ricontrollare nel codice
-
-Nel calcolo degli span bisogna fare attenzione agli indici.
-
-Se nel ciclo uso:
-
-```cpp
-_numbers[i + 1]
-```
-
-devo fermarmi prima dell'ultimo elemento, altrimenti rischio di leggere fuori range.
-
-Quindi mentalmente il ciclo corretto è:
-
-```cpp
-for (size_t i = 0; i + 1 < _numbers.size(); i++)
-```
-
-Questa è una cosa da controllare sempre negli esercizi con vector e accesso per indice.
-
 ## Concetti chiave ex01
 
 - classe con capacità massima
@@ -884,15 +889,15 @@ Questa è una cosa da controllare sempre negli esercizi con vector e accesso per
 - `addRange` con iteratori template
 - `std::sort`
 - shortest span tra vicini ordinati
-- longest span tra minimo e massimo
+- longest span tra minimo e massimo, con `min_element` / `max_element`
 - eccezioni custom
 - attenzione agli indici `i + 1`
 
 ---
 
-# Ex02 - MutantStack
+# Ex02 - Mutated abomination
 
-## Idea
+## Obiettivo
 
 `std::stack` è utile, ma non è iterabile.
 
@@ -1118,3 +1123,43 @@ std::stack<int> s(mstack);
 ```
 
 Nota: `MutantStack` usabile anche come `std::stack`, perché eredita da stack.
+
+---
+
+# Checklist finale modulo
+
+## Concetti da sapere spiegare
+
+- cos'è un container e differenza tra sequence, associative e adapter
+- differenze di memoria tra `vector`, `list` e `deque`
+- cos'è un iteratore e perché serve
+- perché `end()` punta dopo l'ultimo elemento
+- perché gli algoritmi STL lavorano su iteratori e non su container
+- a cosa serve `typename` in `typename T::iterator`
+- differenza tra `reserve` e `resize`
+- perché per lo shortest span conviene ordinare
+- perché il longest span è max - min
+- perché `std::stack` non è iterabile
+- cos'è `container_type` e perché `this->c` è accessibile da `MutantStack`
+
+## Errori tipici da evitare
+
+- usare `end()` come se fosse l'ultimo elemento
+- dimenticare `typename` davanti a `T::iterator`
+- usare `container[i]` su container che non lo supportano, tipo `list`
+- tenere iteratori salvati mentre modifico un `vector`
+- confondere `reserve` con `resize`
+- leggere `_numbers[i + 1]` con la condizione `i < size`
+- calcolare il longest span come salto più grande tra vicini
+- usare `c` invece di `this->c` dentro `MutantStack`
+
+## Mini riassunto mentale
+
+```text
+ex00 -> template sul tipo di container + std::find
+        non trovato = end() -> lancio eccezione io
+ex01 -> Span = vector con capacità massima
+        shortest: sort + vicini, longest: max - min
+ex02 -> MutantStack : std::stack
+        espongo gli iteratori del container interno c
+```
