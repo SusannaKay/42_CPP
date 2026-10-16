@@ -1,122 +1,17 @@
-# CPP03 - Ereditarieta' e ClapTrap family
+# CPP03 - Ereditarietà e la famiglia ClapTrap
 
-Gerarchia mentale:
+Modulo sull'ereditarietà: parto da una classe base, `ClapTrap`, e costruisco classi derivate che riusano la parte comune e aggiungono la propria.
 
-```text
-ClapTrap
-  |
-  +-- ScavTrap
-  |
-  +-- FragTrap
+Cose nuove:
 
-DiamondTrap eredita da ScavTrap e FragTrap
-```
-
-Capire l'ereditarieta' in C++, partendo da una classe base (`ClapTrap`) e poi creando classi derivate che riusano la parte comune e aggiungono comportamenti propri.
-
-Focus:
-
-- costruttori e distruttori
-- copy constructor
-- `operator=`
-- ereditarieta'
-- ordine costruzione / distruzione
+- ereditarietà
+- `protected`
+- ordine di costruzione e distruzione
 - override di metodi
-- ereditarieta' multipla
-- diamond problem
+- ereditarietà multipla
+- diamond problem ed ereditarietà virtuale
 
----
-
-# Concetti chiave
-
-## Classe base
-
-`ClapTrap` = classe base.
-
-Stato comune:
-
-```cpp
-std::string _name;
-unsigned int _hitPoints;
-unsigned int _energyPoints;
-unsigned int _attackDamage;
-```
-
-Azioni comuni:
-
-```cpp
-attack()
-takeDamage()
-beRepaired()
-```
-
-Ogni robot ha:
-
-- nome
-- hit points
-- energy points
-- attack damage
-
-`ClapTrap` è il modello base.
-
-## Ereditarieta'
-
-```cpp
-class ScavTrap : public ClapTrap
-```
-
-`ScavTrap` è un `ClapTrap` con qualcosa in più.
-
-Valori iniziali:
-
-```text
-ClapTrap: 10 HP, 10 energy, 0 attack
-ScavTrap: 100 HP, 50 energy, 20 attack
-FragTrap: 100 HP, 100 energy, 30 attack
-DiamondTrap: 100 HP, 50 energy, 30 attack
-```
-
-## Ordine di costruzione
-
-Classe derivata: prima base, poi derivata.
-
-```cpp
-ScavTrap::ScavTrap(std::string name) : ClapTrap(name)
-```
-
-Ordine:
-
-1. `ClapTrap(name)`
-2. corpo del costruttore `ScavTrap`
-
-Distruzione al contrario:
-
-1. distruttore derivata
-2. distruttore base
-
-I log constructor/destructor seguono questo ordine. 
-
-## Override
-
-`ScavTrap` ridefinisce `attack()`:
-
-```cpp
-void attack(const std::string &target);
-```
-
-Chiamata su `ScavTrap` -> versione `ScavTrap`.
-
-Focus su relazione base/derivata e costruzione oggetti.
-
-## Ereditarieta' multipla
-
-In ex03:
-
-```cpp
-class DiamondTrap: public ScavTrap, public FragTrap
-```
-
-Forma:
+La gerarchia completa a fine modulo è questa:
 
 ```text
         ClapTrap
@@ -126,40 +21,104 @@ Forma:
        DiamondTrap
 ```
 
-Diamond problem: quante copie di `ClapTrap` finiscono dentro `DiamondTrap`?
+---
 
-Nel progetto si ragiona su ambiguità, nomi e metodi ereditati.
+# Ereditarietà
 
-`DiamondTrap` ha anche un proprio `_name`, separato dal nome della parte `ClapTrap`:
+## Cos'è
 
-```text
-nome + "_clap_name"
-```
-
-`whoAmI()` stampa entrambi:
+Quando scrivo:
 
 ```cpp
-DiamondTrap name: ...
-ClapTrap name: ...
+class ScavTrap : public ClapTrap
 ```
+
+sto dicendo che `ScavTrap` **è un** `ClapTrap`, con qualcosa in più.
+
+Quindi `ScavTrap` si ritrova gratis:
+
+- gli attributi di `ClapTrap` (`_name`, `_hitPoints`, ...)
+- i metodi di `ClapTrap` (`attack`, `takeDamage`, `beRepaired`, ...)
+
+e può aggiungere roba sua, tipo `guardGate()`.
+
+Il vantaggio è che il codice comune lo scrivo una volta sola, nella base.
+
+Il `public` davanti a `ClapTrap` vuol dire che quello che era pubblico nella base resta pubblico anche nella derivata. È il caso normale, e quello che uso in tutto il modulo.
+
+## private, protected, public
+
+In CPP00 avevamo `private` e `public`. Ora entra il terzo:
+
+| Accesso     | Classe stessa | Derivate | Fuori |
+| ----------- | ------------- | -------- | ----- |
+| `private`   | sì            | no       | no    |
+| `protected` | sì            | sì       | no    |
+| `public`    | sì            | sì       | sì    |
+
+In ex00 gli attributi di `ClapTrap` sono `private`.
+
+Da ex01 diventano `protected`, perché `ScavTrap` deve poter cambiare `_hitPoints`, `_energyPoints` ecc. nel suo costruttore. Con `private` non potrebbe toccarli, neanche essendo una derivata.
+
+## Ordine di costruzione e distruzione
+
+Una derivata contiene dentro di sé una base. Quindi:
+
+- costruzione: prima la base, poi la derivata
+- distruzione: prima la derivata, poi la base
+
+```cpp
+ScavTrap::ScavTrap(std::string name) : ClapTrap(name)
+{
+    _hitPoints = 100;
+    ...
+}
+```
+
+Ordine:
+
+1. `ClapTrap(name)` costruisce la parte base, con i valori di ClapTrap (10, 10, 0)
+2. il corpo del costruttore `ScavTrap` sovrascrive le statistiche con le sue (100, 50, 20)
+
+Mentalmente è come costruire una casa: prima le fondamenta, poi i piani sopra. Per demolirla, si parte dall'alto.
+
+I log nei costruttori e distruttori servono proprio a vedere questo ordine:
+
+```text
+ClapTrap Carlotta constructor has been called.
+ScavTrap Carlotta constructor has been called
+...
+ScavTrap Carlotta destructor called
+ClapTrap Carlotta destructor has been called.
+```
+
+## Override
+
+`ScavTrap` ridefinisce `attack()`:
+
+```cpp
+void attack(const std::string &target);
+```
+
+Stessa firma della base, comportamento diverso (in questo caso, il messaggio dice `ScavTrap` invece di `ClapTrap`).
+
+Se chiamo `attack()` su uno `ScavTrap`, viene usata la versione di `ScavTrap`.
+
+Nota: senza `virtual` questo funziona solo se chiamo il metodo direttamente sull'oggetto `ScavTrap`. Se lo chiamassi tramite un puntatore a `ClapTrap`, userebbe la versione di `ClapTrap`. Questo è il tema di CPP04.
 
 ---
 
 # Ex00 - Aaaaand... OPEN!
 
-## Scopo
+## Obiettivo
 
-Implementare la classe `ClapTrap` con nome, punti vita, energia, danno d'attacco e tre azioni base: `attack`, `takeDamage`, `beRepaired`.
+Implementare la classe `ClapTrap` con nome, punti vita, energia, danno d'attacco e tre azioni base:
 
-Creare `ClapTrap` con:
-
-- nome
-- hit points
-- energy points
-- attack damage
-- `attack()`
-- `takeDamage()`
-- `beRepaired()`
+```cpp
+void attack(const std::string &target);
+void takeDamage(unsigned int amount);
+void beRepaired(unsigned int amount);
+```
 
 Valori iniziali:
 
@@ -171,47 +130,57 @@ _attackDamage = 0
 
 ## Azioni
 
-`attack()` solo se:
+`attack()` e `beRepaired()` funzionano solo se il robot ha ancora energia e vita:
 
 ```cpp
-_energyPoints > 0 && _hitPoints > 0
+if (_energyPoints > 0 && _hitPoints > 0)
 ```
 
-Se attacca:
+Ognuna delle due consuma 1 energy point.
 
-- stampa messaggio
-- consuma 1 energy point
+`attack()` stampa un messaggio e basta: non toglie davvero vita a nessuno, perché il target è solo una stringa.
 
-`beRepaired()`:
+`beRepaired()` aggiunge hit points.
 
-- controlla energia e vita
-- aumenta hit points
-- consuma 1 energy point
+`takeDamage()` toglie hit points.
 
-`takeDamage()`:
+## takeDamage e unsigned
 
-- sottrae hit points
+Gli attributi sono `unsigned int`. Se un robot ha 10 HP e prende 20 di danno:
+
+```text
+10 - 20 = -10   <- non esiste in unsigned
+```
+
+Con un `unsigned` non esiste il negativo: il valore fa il giro e diventa un numero enorme (circa 4 miliardi). Il robot morto si ritrova immortale.
+
+Quindi prima di sottrarre controllo:
+
+```cpp
+if (amount >= _hitPoints)
+    _hitPoints = 0;
+else
+    _hitPoints -= amount;
+```
 
 ## Forma canonica
 
-Da fissare:
+Come da CPP02, la classe va scritta in Orthodox Canonical Form:
 
-- constructor
-- copy constructor
-- assignment operator
-- destructor
+- costruttore (qui con il nome)
+- costruttore di copia
+- operatore di assegnazione
+- distruttore
 
-I log aiutano a vedere quando vengono chiamati.
+Ognuno stampa un log, così si vede quando viene chiamato.
 
 ---
 
 # Ex01 - Serena, my love!
 
-## Scopo
+## Obiettivo
 
 Creare `ScavTrap` come classe derivata da `ClapTrap`, con statistiche diverse, messaggi diversi e la funzione speciale `guardGate()`.
-
-Aggiungere `ScavTrap`, derivata da `ClapTrap`.
 
 Valori:
 
@@ -221,43 +190,51 @@ Valori:
 20 attack damage
 ```
 
-Funzione speciale:
-
-```cpp
-guardGate()
-```
-
-Stampa Gate keeper mode.
-
-## Specializzazione
-
-`ScavTrap` eredita la base e cambia quello che serve.
-
-Costruttore:
+## Costruttore
 
 ```cpp
 ScavTrap::ScavTrap(std::string name) : ClapTrap(name)
+{
+    _name = name, _hitPoints = 100 , _energyPoints = 50, _attackDamage = 20;
+}
 ```
 
-Prima viene costruita la parte `ClapTrap`, poi `ScavTrap` aggiorna le stats.
+Il costruttore della base va chiamato nella initialization list. Se non lo faccio, il compilatore prova a chiamare il costruttore di default di `ClapTrap`, che qui non esiste: errore di compilazione.
 
-## Accesso ai membri
+Dopo, nel corpo, sovrascrivo le statistiche. Posso farlo perché da questo esercizio gli attributi sono `protected`.
 
-Per accedere direttamente ai membri della base da una derivata:
+## Copia
 
-- `private`: solo classe stessa
-- `protected`: classe stessa + derivate
-- `public`: accessibile da fuori
+Anche costruttore di copia e `operator=` delegano alla base:
+
+```cpp
+ScavTrap::ScavTrap(ScavTrap &other) : ClapTrap(other) {}
+
+ScavTrap& ScavTrap::operator=(const ScavTrap& other)
+{
+    if (this != &other)
+        ClapTrap::operator=(other);
+    return *this;
+}
+```
+
+`ScavTrap` non ha attributi suoi, quindi copiare la parte `ClapTrap` è copiare tutto.
+
+## guardGate()
+
+Stampa che lo `ScavTrap` è entrato in Gate keeper mode. È il metodo che la base non ha.
+
+## attack()
+
+Ridefinito per stampare `ScavTrap` invece di `ClapTrap`. È il primo override del modulo.
 
 ---
 
 # Ex02 - Repetitive work
 
-## Scopo
+## Obiettivo
 
 Creare `FragTrap`, un'altra classe derivata da `ClapTrap`, con i suoi valori iniziali e la funzione speciale `highFivesGuys()`.
-
-Aggiungere `FragTrap`, altra derivata da `ClapTrap`.
 
 Valori iniziali:
 
@@ -267,71 +244,194 @@ Valori iniziali:
 30 attack damage
 ```
 
-Funzione speciale:
+## Struttura
 
-```cpp
-highFivesGuys()
-```
-
-Stampa richiesta di high five.
-
-## Differenza con ScavTrap
-
-```text
-ClapTrap = base comune
-ScavTrap = guardiano
-FragTrap = high five robot
-```
+È praticamente lo `ScavTrap` dell'esercizio prima con altri numeri, infatti l'esercizio si chiama "Repetitive work".
 
 Ogni derivata ha:
 
-- proprio costruttore
+- proprio costruttore, che chiama quello della base
 - proprio distruttore
 - eventuali metodi propri
 - valori iniziali diversi
+
+```text
+ClapTrap = base comune
+ScavTrap = guardiano, guardGate()
+FragTrap = high five robot, highFivesGuys()
+```
+
+`highFivesGuys()` stampa una richiesta di high five. Profondissimo.
 
 ---
 
 # Ex03 - Now it's weird!
 
-## Scopo
+## Obiettivo
 
-Creare `DiamondTrap`, che eredita sia da `ScavTrap` sia da `FragTrap`, gestendo il nome proprio, il nome della parte `ClapTrap` e la funzione `whoAmI()`.
-
-`DiamondTrap`: eredita da `ScavTrap` e `FragTrap`.
+Creare `DiamondTrap`, che eredita sia da `ScavTrap` sia da `FragTrap`.
 
 ```cpp
 class DiamondTrap: public ScavTrap, public FragTrap
 ```
 
-Qui entrano:
+Deve avere:
 
-- ereditarieta' multipla
-- metodi da più rami
-- nomi duplicati
-- inizializzazione di più classi base
+- un suo `_name`
+- il nome della parte `ClapTrap` uguale a `name + "_clap_name"`
+- le statistiche prese un po' da uno e un po' dall'altro
+- `attack()` di `ScavTrap`
+- `whoAmI()`, che stampa entrambi i nomi
+
+## Il diamond problem
+
+Ereditando da due classi che derivano entrambe da `ClapTrap`, di default `DiamondTrap` si ritrova con **due** `ClapTrap` dentro:
+
+```text
+DiamondTrap
+├── ScavTrap
+│   └── ClapTrap   <- copia 1
+└── FragTrap
+    └── ClapTrap   <- copia 2
+```
+
+Quindi due `_name`, due `_hitPoints`, ecc.
+
+Se scrivo `_hitPoints`, il compilatore non sa quale dei due intendo: errore di ambiguità.
+
+## Ereditarietà virtuale
+
+La soluzione è dire a `ScavTrap` e `FragTrap` che la base `ClapTrap` va condivisa:
+
+```cpp
+class ScavTrap : virtual public ClapTrap
+class FragTrap : virtual public ClapTrap
+```
+
+Con `virtual`, dentro `DiamondTrap` c'è un solo `ClapTrap`:
+
+```text
+DiamondTrap
+├── ScavTrap ─┐
+├── FragTrap ─┤
+└── ClapTrap  <- una sola copia, condivisa
+```
+
+Il `virtual` va messo su `ScavTrap` e `FragTrap`, non su `DiamondTrap`. Infatti nel codice è solo nell'ex03: negli esercizi prima non serviva.
+
+## Chi costruisce ClapTrap?
+
+Con l'ereditarietà virtuale cambia una regola: la base virtuale la costruisce la classe **più derivata**, cioè `DiamondTrap`.
+
+```cpp
+DiamondTrap::DiamondTrap(std::string name)
+    : ClapTrap(name + "_clap_name"), ScavTrap(name), FragTrap(name)
+```
+
+Le chiamate a `ClapTrap(name)` dentro i costruttori di `ScavTrap` e `FragTrap` vengono ignorate, sennò `ClapTrap` verrebbe costruito due volte.
+
+Ordine nei log:
+
+```text
+ClapTrap Alpha_clap_name constructor has been called.
+ScavTrap Alpha constructor has been called
+FragTrap Alpha constructor has been called.
+DiamondTrap Alpha constructor has been called.
+```
+
+Uno solo `ClapTrap`, all'inizio.
 
 ## Statistiche
 
-`DiamondTrap` prende:
+Il subject vuole:
 
 ```text
-hit points da FragTrap: 100
-energy points da ScavTrap: 50
-attack damage da FragTrap: 30
+hit points:    da FragTrap -> 100
+energy points: da ScavTrap -> 50
+attack damage: da FragTrap -> 30
 ```
 
-`attack()` delegato a `ScavTrap`:
+Il problema è che gli attributi stanno nell'unico `ClapTrap` condiviso, e i costruttori di `ScavTrap` e `FragTrap` li sovrascrivono uno dopo l'altro. Dopo `FragTrap`, l'energia sarebbe 100, non 50.
+
+Quindi nel corpo del costruttore di `DiamondTrap` li imposto a mano:
 
 ```cpp
-ScavTrap::attack(target);
+_hitPoints = 100;
+_energyPoints = 50;
+_attackDamage = 30;
 ```
 
-## whoAmI()
+## I due nomi
 
-Due identità:
+`DiamondTrap` ha un suo `_name`, che **nasconde** quello di `ClapTrap`:
 
-- `_name` di `DiamondTrap`
-- nome della parte `ClapTrap`: `name + "_clap_name"`
+```cpp
+private:
+    std::string _name;
+```
 
-`whoAmI()` mostra questa doppia identità.
+Dentro `DiamondTrap`:
+
+- `_name` è quello di `DiamondTrap`
+- `ClapTrap::_name` è quello della base
+
+```cpp
+_name = name;
+ClapTrap::_name = name + "_clap_name";
+```
+
+`whoAmI()` li stampa tutti e due:
+
+```text
+DiamondTrap name: Alpha
+ClapTrap name: Alpha_clap_name
+```
+
+## attack()
+
+```cpp
+void DiamondTrap::attack(const std::string &target)
+{
+    ScavTrap::attack(target);
+}
+```
+
+`ScavTrap::` dice esplicitamente quale versione usare. Senza, con due basi che hanno entrambe un `attack()`, sarebbe ambiguo.
+
+---
+
+# Checklist finale modulo
+
+## Concetti da sapere spiegare
+
+- cosa vuol dire che `ScavTrap` "è un" `ClapTrap`
+- differenza tra `private`, `protected` e `public`
+- perché da ex01 gli attributi diventano `protected`
+- ordine di costruzione e distruzione tra base e derivata
+- perché il costruttore della base va chiamato nella initialization list
+- cos'è un override
+- cos'è il diamond problem
+- cosa cambia con `virtual public`
+- chi costruisce la base virtuale
+- perché `DiamondTrap` ha due `_name` e come si accede a ciascuno
+
+## Errori tipici da evitare
+
+- sottrarre danni a un `unsigned` senza controllare: underflow, robot immortale
+- lasciare gli attributi `private` e non riuscire a modificarli dalla derivata
+- dimenticare di chiamare il costruttore della base nella initialization list
+- copiare solo la parte derivata in `operator=` e dimenticare la base
+- in ex03 dimenticare `virtual` su `ScavTrap` / `FragTrap`
+- in ex03 non impostare a mano le statistiche: vince l'ultimo costruttore chiamato
+- chiamare `attack()` su `DiamondTrap` senza specificare quale
+
+## Mini riassunto mentale
+
+```text
+ex00 -> ClapTrap base, forma canonica, attenzione agli unsigned
+ex01 -> ScavTrap : public ClapTrap, protected, override di attack
+ex02 -> FragTrap, stessa cosa con altri numeri
+ex03 -> DiamondTrap : ScavTrap, FragTrap
+        virtual public per avere un solo ClapTrap
+        due _name, stats a mano, attack di ScavTrap
+```
