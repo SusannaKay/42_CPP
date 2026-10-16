@@ -32,32 +32,25 @@ void Span::addNumber(int n){
 
 int Span::shortestSpan(){
 
-        if (_numbers.size() > 2)
-    {
-        std::sort(_numbers.begin(), _numbers.end());
-        int shortest = _numbers[1] - _numbers[0]; 
-        for (size_t i = 1; i < _numbers.size(); i++)
-        {
-            if (_numbers[i + 1] - _numbers[i] < shortest && _numbers[i + 1])
-                shortest = _numbers[i + 1] - _numbers[i];
-        }
-        return shortest;
-    }
-    else 
+    if (_numbers.size() < 2)
         throw NotEnoughNumbers();
+
+    std::sort(_numbers.begin(), _numbers.end());
+    int shortest = _numbers[1] - _numbers[0];
+    for (size_t i = 1; i + 1 < _numbers.size(); i++)
+    {
+        if (_numbers[i + 1] - _numbers[i] < shortest)
+            shortest = _numbers[i + 1] - _numbers[i];
+    }
+    return shortest;
 }
 int Span::longestSpan(){
     if (_numbers.size() < 2)
         throw NotEnoughNumbers();
 
-    std::sort(_numbers.begin(), _numbers.end());
-    int longest = _numbers[1] - _numbers[0]; 
-    for (size_t i = 1; i < _numbers.size(); i++)
-    {
-        if (_numbers[i + 1] - _numbers[i] > longest && _numbers[i + 1])
-            longest = _numbers[i + 1] - _numbers[i];
-    }
-    return longest;
+    int max = *std::max_element(_numbers.begin(), _numbers.end());
+    int min = *std::min_element(_numbers.begin(), _numbers.end());
+    return max - min;
 }
 
 const char *Span::NotEnoughNumbers::what() const throw(){
